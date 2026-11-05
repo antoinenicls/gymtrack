@@ -1,0 +1,11 @@
+import { webkit, devices } from 'playwright';
+const browser = await webkit.launch();
+const ctx = await browser.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 } });
+const page = await ctx.newPage();
+await page.goto('http://localhost:5177/#/profil/reglages', { waitUntil: 'networkidle' });
+await page.waitForTimeout(900);
+await page.getByText('Ta salle').scrollIntoViewIfNeeded();
+await page.waitForTimeout(300);
+await page.screenshot({ path: 'scripts/out/settings.png' });
+console.log('ok');
+await browser.close();

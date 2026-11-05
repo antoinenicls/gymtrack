@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    /* Hauteur reelle du viewport, recalculee en JS : sur mobile, 100vh compte
+       la barre d'URL retractile et deborde. */
+    --vh: 100dvh;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    /* Coupe le rebond elastique de la page : l'app doit se sentir rigide,
+       comme du natif, pas comme une page web qui flotte. */
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-white font-sans text-ink antialiased;
+    overscroll-behavior: contain;
+    /* Pas de selection accidentelle en enchainant les taps entre deux series. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Les zones ou l'utilisateur a une vraie raison de selectionner du texte. */
+  input,
+  textarea,
+  [data-selectable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* 16px minimum : en dessous, iOS zoome tout seul au focus et casse la mise
+     en page. C'est la regle non negociable de tout formulaire mobile. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Les fleches de spinner sur les inputs number sont inutilisables au pouce. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  *:focus-visible {
+    outline: 2px solid theme('colors.accent.DEFAULT');
+    outline-offset: 3px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-[-0.03em];
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border border-line bg-white;
+  }
+
+  .section-label {
+    @apply font-sans text-[11px] font-bold uppercase tracking-[2.5px] text-accent;
+  }
+
+  /* Les chiffres : tabulaires pour que poids et reps ne dansent pas d'une
+     ligne a l'autre quand on scrolle une liste de series. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .btn-primary {
+    @apply rounded-pill bg-accent px-5 font-display font-bold text-white
+           transition-colors duration-200 active:bg-accent-dark;
+  }
+
+  .btn-secondary {
+    @apply rounded-pill border-[1.5px] border-black/15 bg-white px-5
+           font-display font-bold text-ink transition-colors duration-200 active:bg-alt;
+  }
+
+  /* Zone de scroll interne : le rebond est contenu a la liste, la page ne
+     bouge jamais derriere. */
+  .scroll-area {
+    @apply overflow-y-auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Reponse tactile universelle : tout element interactif s'enfonce
+     legerement sous le doigt. C'est ce qui fait la difference entre une page
+     web et une application, et ca confirme le tap avant meme que l'action
+     n'aboutisse. La transformation reste sur le GPU, donc aucun surcout. */
+  .pressable {
+    transition:
+      transform 0.14s cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.2s ease;
+    will-change: transform;
+  }
+  .pressable:active {
+    transform: scale(0.965);
+  }
+
+  /* Cibles larges (boutons pleine largeur) : on enfonce moins, sinon l'effet
+     devient caricatural sur une grande surface. */
+  .pressable-wide:active {
+    transform: scale(0.985);
+  }
+
+  /* Entree en cascade d'une liste. Le decalage est plafonne a 8 elements :
+     au-dela, l'utilisateur attendrait que sa liste finisse d'apparaitre. */
+  .stagger > * {
+    animation: item-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 30ms; }
+  .stagger > *:nth-child(3) { animation-delay: 60ms; }
+  .stagger > *:nth-child(4) { animation-delay: 90ms; }
+  .stagger > *:nth-child(5) { animation-delay: 120ms; }
+  .stagger > *:nth-child(6) { animation-delay: 150ms; }
+  .stagger > *:nth-child(7) { animation-delay: 180ms; }
+  .stagger > *:nth-child(n + 8) { animation-delay: 210ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,20 @@
+node_modules
+dist
+dist-ssr
+.env
+.env.local
+.env.*.local
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.tsbuildinfo
+
+# Captures de verification Playwright
+scripts/out/
+
+# Navigateurs Playwright
+.playwright/
+.vercel
+.env*
