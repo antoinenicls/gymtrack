@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { normaliseDecimal } from './useDecimalInput';
+import { exceedsMax, normaliseDecimal } from './useDecimalInput';
 
 describe('saisie decimale', () => {
   it('garde la virgule pendant la frappe', () => {
@@ -42,5 +42,25 @@ describe('saisie decimale', () => {
     expect(normaliseDecimal('37kg', 2)).toBe('37');
     expect(normaliseDecimal('-37', 2)).toBe('37');
     expect(normaliseDecimal('', 2)).toBe('');
+  });
+});
+
+describe('plafond de saisie', () => {
+  it('refuse une note d’effort au-delà de l’échelle', () => {
+    expect(exceedsMax('10', 10)).toBe(false);
+    expect(exceedsMax('10,5', 10)).toBe(true);
+    expect(exceedsMax('999', 10)).toBe(true);
+    expect(exceedsMax('9', 9)).toBe(false);
+    expect(exceedsMax('10', 9)).toBe(true);
+  });
+
+  it('laisse passer les états intermédiaires et le champ vide', () => {
+    expect(exceedsMax('', 10)).toBe(false);
+    expect(exceedsMax('9,', 9)).toBe(false);
+    expect(exceedsMax('0', 9)).toBe(false);
+  });
+
+  it('ne plafonne rien sans maximum', () => {
+    expect(exceedsMax('250', undefined)).toBe(false);
   });
 });

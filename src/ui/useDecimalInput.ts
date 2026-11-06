@@ -32,15 +32,33 @@ export function normaliseDecimal(raw: string, maxDecimals: number): string {
   return `${whole},${rest.join('').slice(0, maxDecimals)}`;
 }
 
+/**
+ * Vrai si la frappe depasse le plafond du champ.
+ *
+ * Une frappe qui depasse est REFUSEE, le champ garde ce qu'il affichait : on
+ * ne laisse pas ecrire « 999 » dans une note d'effort sur 10 pour la corriger
+ * en douce au moment de quitter le champ. Le plancher, lui, ne bloque rien :
+ * les etats intermediaires d'une saisie (« 0 » avant « 0,5 ») passent par en
+ * dessous, et c'est l'enregistrement qui borne.
+ */
+export function exceedsMax(text: string, max: number | undefined): boolean {
+  if (max === undefined || text === '') return false;
+  const parsed = Number(text.replace(',', '.'));
+  return Number.isFinite(parsed) && parsed > max;
+}
+
 export function useDecimalInput({
   value,
   onChange,
   maxDecimals = 2,
+  max,
 }: {
   value: number | null;
   onChange: (value: number | null) => void;
   /** 2 pour une charge, 1 pour un RPE au demi, 0 pour des repetitions. */
   maxDecimals?: number;
+  /** Plafond de saisie. Absent = aucun (une charge, des repetitions). */
+  max?: number;
 }): {
   value: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -55,6 +73,7 @@ export function useDecimalInput({
     value: draft ?? (value === null ? '' : formatWeight(value)),
     onChange: (event) => {
       const next = normaliseDecimal(event.currentTarget.value, maxDecimals);
+      if (exceedsMax(next, max)) return;
       setDraft(next);
       if (next === '') return onChange(null);
       const parsed = Number(next.replace(',', '.'));

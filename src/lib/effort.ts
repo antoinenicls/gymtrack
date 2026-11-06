@@ -20,6 +20,14 @@ export const EFFORT_LABEL: Record<EffortScale, string> = { rpe: 'RPE', rir: 'RIR
 const RPE_MIN = 1;
 const RPE_MAX = 10;
 
+/**
+ * Plus grande valeur saisissable dans l'echelle : RPE 10, ou RIR 9 (soit
+ * RPE 1, le bas de l'echelle). Au-dela, ce n'est plus une note d'effort.
+ */
+export function effortMax(scale: EffortScale): number {
+  return scale === 'rir' ? RPE_MAX - RPE_MIN : RPE_MAX;
+}
+
 /** Valeur stockee (RPE) vers la valeur affichee dans l'echelle choisie. */
 export function toScale(rpe: number | null, scale: EffortScale): number | null {
   if (rpe === null) return null;

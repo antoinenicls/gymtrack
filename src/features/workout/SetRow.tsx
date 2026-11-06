@@ -17,7 +17,7 @@ import { formatWeight } from '@/lib/metrics';
 import { previousFill } from '@/lib/previousFill';
 import { tapFeedback } from '@/services/feedback';
 import { useDecimalInput } from '@/ui/useDecimalInput';
-import { EFFORT_LABEL, fromScale, toScale, type EffortScale } from '@/lib/effort';
+import { EFFORT_LABEL, effortMax, fromScale, toScale, type EffortScale } from '@/lib/effort';
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -200,6 +200,7 @@ export default function SetRow({
           step={0.5}
           // L'effort se note au demi-point : 7,5 oui, 7,25 non.
           maxDecimals={1}
+          max={effortMax(effortScale)}
         />
       )}
 
@@ -256,6 +257,7 @@ function NumberCell({
   label,
   step,
   maxDecimals,
+  max,
 }: {
   value: number | null;
   placeholder: string;
@@ -264,8 +266,10 @@ function NumberCell({
   label: string;
   step: number;
   maxDecimals: number;
+  /** Plafond de saisie : une frappe au-dela est refusee. */
+  max?: number;
 }) {
-  const field = useDecimalInput({ value, onChange, maxDecimals });
+  const field = useDecimalInput({ value, onChange, maxDecimals, max });
   return (
     <input
       type="text"

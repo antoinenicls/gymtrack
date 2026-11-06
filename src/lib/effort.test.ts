@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatEffort, fromScale, toScale } from './effort';
+import { effortMax, formatEffort, fromScale, toScale } from './effort';
 
 describe('échelle d’effort', () => {
   it('RIR = 10 - RPE', () => {
@@ -30,5 +30,10 @@ describe('échelle d’effort', () => {
     expect(formatEffort(8.5, 'rpe')).toBe('RPE 8,5');
     expect(formatEffort(8.5, 'rir')).toBe('RIR 1,5');
     expect(formatEffort(10, 'rir')).toBe('RIR 0');
+  });
+
+  it('plafonne la saisie au haut de chaque échelle', () => {
+    expect(effortMax('rpe')).toBe(10);
+    expect(effortMax('rir')).toBe(9);
   });
 });

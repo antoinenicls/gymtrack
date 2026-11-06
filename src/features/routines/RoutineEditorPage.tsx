@@ -39,7 +39,7 @@ import RestPicker from '@/features/workout/RestPicker';
 import ExerciseNote from '@/features/workout/ExerciseNote';
 import ReorderSheet, { type ReorderItem } from '@/features/workout/ReorderSheet';
 import { formatDuration } from '@/lib/metrics';
-import { EFFORT_LABEL, fromScale, toScale, type EffortScale } from '@/lib/effort';
+import { EFFORT_LABEL, effortMax, fromScale, toScale, type EffortScale } from '@/lib/effort';
 import { TYPE_LABEL, TYPE_LETTER, TYPE_STYLE, isToFailure } from '@/lib/setTypes';
 import { supersetLetters, supersetRuns } from '@/lib/superset';
 import { SupersetGroup, SupersetTag } from '@/ui/SupersetGroup';
@@ -556,6 +556,7 @@ export default function RoutineEditorPage() {
                             placeholder="-"
                             label={`${EFFORT_LABEL[effortScale]} cible série ${setIndex + 1}`}
                             maxDecimals={1}
+                            max={effortMax(effortScale)}
                             onChange={(v) =>
                               updateSet(item.id, set.id, {
                                 // Stocke en RPE quelle que soit l'echelle
@@ -873,6 +874,7 @@ function TargetCell({
   label,
   onChange,
   maxDecimals,
+  max,
 }: {
   value: number | null;
   placeholder: string;
@@ -880,8 +882,10 @@ function TargetCell({
   onChange: (value: number | null) => void;
   /** 2 pour une charge, 1 pour un RPE au demi, 0 pour des repetitions. */
   maxDecimals: number;
+  /** Plafond de saisie : une frappe au-dela est refusee. */
+  max?: number;
 }) {
-  const field = useDecimalInput({ value, onChange, maxDecimals });
+  const field = useDecimalInput({ value, onChange, maxDecimals, max });
   return (
     <input
       type="text"
