@@ -1,6 +1,6 @@
 # GymTrack
 
-Journal d'entraînement de musculation, pensé pour être utilisé au bord du banc. Application web (PWA) installable, qui marche hors ligne.
+Carnet d'entraînement de musculation : séances prêtes en un tap, chrono de repos, records et analyse de ta progression. Application web (PWA) installable, qui marche hors ligne.
 
 - **Sans compte, sans serveur.** Tes séances restent sur ton téléphone (IndexedDB). Rien n'est envoyé nulle part.
 - **Hors ligne.** Une salle en sous-sol n'empêche ni de démarrer ni de finir une séance.

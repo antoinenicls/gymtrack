@@ -22,6 +22,7 @@ import { CHIMES, DEFAULT_CHIME } from '@/lib/restChime';
 import { formatWeight } from '@/lib/metrics';
 import type { EffortScale } from '@/lib/effort';
 import { Banner, Button, Card, SectionLabel, Sheet, cx } from '@/ui/primitives';
+import FeedbackLink from '@/features/feedback/FeedbackLink';
 import {
   notificationPermission,
   previewRestChime,
@@ -397,6 +398,13 @@ export default function SettingsPage() {
           <Button variant="danger" full className="mt-5" onClick={() => setConfirmWipe(true)}>
             Effacer toutes les données
           </Button>
+        </section>
+
+        <section>
+          <SectionLabel>Ton avis</SectionLabel>
+          <div className="mt-2">
+            <FeedbackLink />
+          </div>
         </section>
 
         {/* Confirmation de restauration : le remplacement est irreversible, on

@@ -11,6 +11,7 @@ import { Card, EmptyState, PageTitle, SectionLabel, Stat, cx } from '@/ui/primit
 import WeeklyGoalWidget from './WeeklyGoalWidget';
 import YearHeatmap from './YearHeatmap';
 import StreakCard from './StreakCard';
+import FeedbackLink from '@/features/feedback/FeedbackLink';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEKS_SHOWN = 8;
@@ -225,6 +226,10 @@ export default function ProfilePage() {
             honnêtement une série lourde et courte à une série plus légère et longue.
           </p>
         )}
+      </section>
+
+      <section className="mt-8 px-4">
+        <FeedbackLink />
       </section>
     </div>
   );
