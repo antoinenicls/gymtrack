@@ -304,7 +304,7 @@ export const BALANCES: BalanceDef[] = [
   {
     id: 'arriere-avant-jambe',
     label: 'Arrière / avant de la jambe',
-    left: { label: 'Ischios, fessiers', groups: ['ischios', 'fessiers'] },
+    left: { label: 'Ischios et fessiers', groups: ['ischios', 'fessiers'] },
     right: { label: 'Quadriceps', groups: ['quadriceps'] },
     range: { from: 0.6, to: 1.5 },
     belowAdvice: 'Les quadriceps dominent : l’arrière de la jambe est en retrait.',

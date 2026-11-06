@@ -135,7 +135,7 @@ const checks = {
   cartes:
     titles.join('|') ===
     'Séance par séance|Séries par groupe musculaire|Respect des normes|Équilibres|Répartition des séries|Repos prévu|Intensité prévue',
-  duree: text.includes('D’entraînement par semaine'),
+  duree: text.includes('Entraînement par semaine'),
   absents: text.includes('Aucune série : '),
   repos: text.includes('4 / 4'),
   rythme: text.includes('Ton programme compte 4 séances par semaine'),

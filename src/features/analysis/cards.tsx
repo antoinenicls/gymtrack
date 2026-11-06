@@ -570,8 +570,9 @@ function MuscleSetsCard({ context }: { context: AnalysisContext }) {
       </p>
       {single.length > 0 && (
         <p className="mt-1 text-[13px] leading-relaxed text-ink-3">
-          Un seul mouvement pour {list(single.map((row) => lower(MUSCLE_GROUP_LABELS[row.group])))}.
-          Varier l’angle ou l’outil répartit mieux le travail sur tout le muscle.
+          Un seul exercice pour :{' '}
+          {list(single.map((row) => lower(MUSCLE_GROUP_LABELS[row.group])))}. Varier l’angle ou
+          l’outil répartit mieux le travail sur tout le muscle.
         </p>
       )}
     </>
@@ -1100,7 +1101,7 @@ function SessionsCard({ context }: { context: AnalysisContext }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <Tile value={week.value} unit={week.unit} label="D’entraînement par semaine" accent="accent" />
+        <Tile value={week.value} unit={week.unit} label="Entraînement par semaine" accent="accent" />
         <Tile value={String(weekSets)} label="Séries de travail par semaine" />
       </div>
 
@@ -1259,7 +1260,7 @@ function RestCard({ context }: { context: AnalysisContext }) {
       <Card className="divide-y divide-line p-0">
         <div className="px-4 py-3">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 text-[14px] font-medium">Exercices assez reposés</span>
+            <span className="min-w-0 text-[14px] font-medium">Exercices avec assez de repos</span>
             <span className={cx('num shrink-0 text-[15px] font-bold', STATE_COLOR[state])}>
               {ok} / {review.judged.length}
             </span>
