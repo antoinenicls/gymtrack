@@ -23,6 +23,7 @@ import { formatWeight } from '@/lib/metrics';
 import type { EffortScale } from '@/lib/effort';
 import { Banner, Button, Card, SectionLabel, Sheet, cx } from '@/ui/primitives';
 import FeedbackLink from '@/features/feedback/FeedbackLink';
+import { InstallLink } from '@/features/onboarding/IOSInstallPrompt';
 import {
   notificationPermission,
   previewRestChime,
@@ -147,6 +148,10 @@ export default function SettingsPage() {
       </h1>
 
       <div className="mt-5 space-y-7 px-4">
+        {/* En tete : c'est la seule section qui n'a lieu d'etre que dans
+            Safari, et celui qui la cherche vient precisement pour elle. */}
+        <InstallLink />
+
         <section>
           <SectionLabel>Pendant la séance</SectionLabel>
           <Card className="mt-2 divide-y divide-line">
