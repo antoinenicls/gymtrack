@@ -13,6 +13,8 @@ import {
 } from '@/lib/routineSync';
 import { formatDuration, formatVolume, workoutAverageRpe, workoutVolume } from '@/lib/metrics';
 import { Banner, Button, PrBadge, Sheet, Stat } from '@/ui/primitives';
+import { EFFORT_LABEL, formatEffortValue } from '@/lib/effort';
+import { useEffortScale } from '@/services/useEffortScale';
 
 export default function FinishSummary({
   workout,
@@ -25,6 +27,7 @@ export default function FinishSummary({
   /** Ecart entre ce qui etait prevu et ce qui a ete fait, si la seance vient
    *  d'une routine. */
   const [diff, setDiff] = useState<RoutineDiff | null>(null);
+  const effortScale = useEffortScale();
   const [synced, setSynced] = useState(false);
   /** Seance improvisee qu'on peut encore proposer d'enregistrer. */
   const [saveable, setSaveable] = useState(
@@ -87,8 +90,8 @@ export default function FinishSummary({
           <Stat value={formatDuration(workout.durationSec ?? 0)} label="Durée" />
           <Stat value={formatVolume(workoutVolume(workout))} label="Volume total" accent="accent" />
           <Stat
-            value={rpe !== null ? String(rpe).replace('.', ',') : '-'}
-            label="RPE moyen"
+            value={rpe !== null ? formatEffortValue(rpe, effortScale) : '-'}
+            label={`${EFFORT_LABEL[effortScale]} moyen`}
           />
         </div>
 

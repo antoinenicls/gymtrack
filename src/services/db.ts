@@ -207,6 +207,7 @@ export const DEFAULT_SETTINGS: Settings = {
   vibrationEnabled: true,
   weightStepKg: 2.5,
   rpeEnabled: true,
+  effortScale: 'rpe',
   // Trois seances par semaine : le rythme le plus courant, et un point de
   // depart que l'utilisateur ajuste depuis son profil.
   weeklyGoal: 3,

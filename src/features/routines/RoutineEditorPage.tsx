@@ -39,6 +39,7 @@ import RestPicker from '@/features/workout/RestPicker';
 import ExerciseNote from '@/features/workout/ExerciseNote';
 import ReorderSheet, { type ReorderItem } from '@/features/workout/ReorderSheet';
 import { formatDuration } from '@/lib/metrics';
+import { EFFORT_LABEL, fromScale, toScale, type EffortScale } from '@/lib/effort';
 import { TYPE_LABEL, TYPE_LETTER, TYPE_STYLE, isToFailure } from '@/lib/setTypes';
 import { supersetLetters, supersetRuns } from '@/lib/superset';
 import { SupersetGroup, SupersetTag } from '@/ui/SupersetGroup';
@@ -61,6 +62,7 @@ export default function RoutineEditorPage() {
   const [exercises, setExercises] = useState<Map<string, Exercise>>(new Map());
   const [folders, setFolders] = useState<RoutineFolder[]>([]);
   const [showRpe, setShowRpe] = useState(true);
+  const [effortScale, setEffortScale] = useState<EffortScale>('rpe');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuItemId, setMenuItemId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
@@ -85,7 +87,9 @@ export default function RoutineEditorPage() {
     void (async () => {
       setExercises(new Map((await exerciseRepo.all()).map((e) => [e.id, e])));
       setFolders(await folderRepo.all());
-      setShowRpe((await settingsRepo.get()).rpeEnabled);
+      const settings = await settingsRepo.get();
+      setShowRpe(settings.rpeEnabled);
+      setEffortScale(settings.effortScale ?? 'rpe');
       if (isNew) {
         const blank: Routine = {
           id: newId(),
@@ -151,6 +155,34 @@ export default function RoutineEditorPage() {
         },
       ],
     });
+  };
+
+  /**
+   * Insere une serie AVANT celle designee, meme geste qu'en seance.
+   *
+   * La cible reprend celle de la serie de travail qui precede l'insertion,
+   * sinon celle au-dessus de laquelle on se glisse : une serie oubliee au
+   * milieu ressemble presque toujours a ses voisines.
+   */
+  const insertSetBefore = (itemId: string, setId: string): void => {
+    const item = routine.items.find((i) => i.id === itemId);
+    if (!item) return;
+    const index = item.sets.findIndex((s) => s.id === setId);
+    if (index < 0) return;
+    const above = item.sets
+      .slice(0, index)
+      .reverse()
+      .find((s) => s.type !== 'echauffement');
+    const model = above ?? item.sets[index];
+    const sets = [...item.sets];
+    sets.splice(index, 0, {
+      id: newId(),
+      type: 'normale',
+      targetWeightKg: model?.targetWeightKg ?? null,
+      targetReps: model?.targetReps ?? null,
+      targetRpe: model?.targetRpe ?? null,
+    });
+    updateItem(itemId, { sets });
   };
 
   const removeSet = (itemId: string, setId: string): void => {
@@ -416,7 +448,7 @@ export default function RoutineEditorPage() {
                     <ColumnHead className="pl-1 text-left">Type</ColumnHead>
                     <ColumnHead>kg cible</ColumnHead>
                     <ColumnHead>Reps</ColumnHead>
-                    {showRpe && <ColumnHead>RPE</ColumnHead>}
+                    {showRpe && <ColumnHead>{EFFORT_LABEL[effortScale]}</ColumnHead>}
                     <ColumnHead />
                   </div>
 
@@ -520,15 +552,16 @@ export default function RoutineEditorPage() {
 
                         {showRpe && (
                           <TargetCell
-                            value={set.targetRpe}
+                            value={toScale(set.targetRpe, effortScale)}
                             placeholder="-"
-                            label={`RPE cible série ${setIndex + 1}`}
+                            label={`${EFFORT_LABEL[effortScale]} cible série ${setIndex + 1}`}
                             maxDecimals={1}
                             onChange={(v) =>
                               updateSet(item.id, set.id, {
-                                // Le RPE est borne a l'echelle 1-10 : au-dela
+                                // Stocke en RPE quelle que soit l'echelle
+                                // affichee, et borne : au-dela de l'echelle,
                                 // ce n'est plus une note d'effort.
-                                targetRpe: v === null ? null : Math.min(10, Math.max(1, v)),
+                                targetRpe: fromScale(v, effortScale),
                               })
                             }
                           />
@@ -665,6 +698,9 @@ export default function RoutineEditorPage() {
               const next = !isToFailure(target);
               updateSet(typeTarget.itemId, typeTarget.setId, {
                 toFailure: next,
+                // Meme regle qu'en seance : une serie prescrite a l'echec vise
+                // RIR 0 (RPE 10), si aucune cible d'effort n'est deja posee.
+                ...(next && target.targetRpe === null ? { targetRpe: 10 } : {}),
                 // Meme raison qu'en seance : le type 'echec' portait seul
                 // l'information, l'enlever ne peut pas le laisser en place.
                 ...(!next && target.type === 'echec' ? { type: 'normale' as SetType } : {}),
@@ -676,6 +712,7 @@ export default function RoutineEditorPage() {
               })
             }
             onClose={() => setTypeTarget(null)}
+            onInsertBefore={() => insertSetBefore(typeTarget.itemId, typeTarget.setId)}
             onDelete={() => removeSet(typeTarget.itemId, typeTarget.setId)}
             canDelete={(item?.sets.length ?? 0) > 1}
           />
@@ -812,7 +849,8 @@ function FolderChip({
 }
 
 /**
- * Colonnes de la grille. La colonne RPE suit le meme reglage qu'en seance.
+ * Colonnes de la grille. La colonne d'effort (RPE ou RIR) suit le meme
+ * reglage qu'en seance.
  *
  * Les cibles chiffrees sont plus etroites qu'en seance, et c'est voulu : elles
  * portent au plus trois caracteres, alors que la colonne « Type » porte des

@@ -1085,6 +1085,7 @@ function LiveWorkout({
   }, [workout.entries, exercises]);
 
   const showRpe = settings?.rpeEnabled ?? true;
+  const effortScale = settings?.effortScale ?? 'rpe';
 
   return (
     <div className="flex h-full flex-col">
@@ -1195,6 +1196,7 @@ function LiveWorkout({
                     exercise={exercises.get(entry.exerciseId)}
                     previousSets={previous.get(entry.exerciseId) ?? []}
                     showRpe={showRpe}
+                    effortScale={effortScale}
                     // Rang dans le superset : « A1 », « A2 »… la notation des
                     // programmes ecrits. Rien pour un exercice seul.
                     supersetTag={letter ? `${letter}${positionInRun + 1}` : null}
@@ -1336,7 +1338,14 @@ function LiveWorkout({
               if (!next && target.type === 'echec') {
                 void store.setSetType(typeTarget.entryId, typeTarget.setId, 'normale');
               }
-              void store.updateSet(typeTarget.entryId, typeTarget.setId, { toFailure: next });
+              void store.updateSet(typeTarget.entryId, typeTarget.setId, {
+                toFailure: next,
+                // Un echec dit qu'il ne restait plus rien : RIR 0, soit RPE 10.
+                // Seulement si le champ est vide, jamais par-dessus une note
+                // deja saisie. L'inverse ne vaut pas : un RIR 0 n'est pas un
+                // echec, aucune repetition n'y a ete manquee.
+                ...(next && target.rpe === null ? { rpe: 10 } : {}),
+              });
             }}
             onToggleDropStart={() =>
               void store.updateSet(typeTarget.entryId, typeTarget.setId, {

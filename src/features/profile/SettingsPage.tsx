@@ -20,6 +20,7 @@ import {
 } from '@/services/backup';
 import { CHIMES, DEFAULT_CHIME } from '@/lib/restChime';
 import { formatWeight } from '@/lib/metrics';
+import type { EffortScale } from '@/lib/effort';
 import { Banner, Button, Card, SectionLabel, Sheet, cx } from '@/ui/primitives';
 import {
   notificationPermission,
@@ -149,11 +150,20 @@ export default function SettingsPage() {
           <SectionLabel>Pendant la séance</SectionLabel>
           <Card className="mt-2 divide-y divide-line">
             <Toggle
-              label="Saisie du RPE"
-              hint="Ajoute une colonne d’effort perçu. Sans elle, la suggestion de surcharge reste prudente."
+              label="Noter l’effort de chaque série"
+              hint="Ajoute une colonne d’effort à la séance. Sans elle, la suggestion de surcharge reste prudente."
               checked={settings.rpeEnabled}
               onChange={(v) => patch({ rpeEnabled: v })}
             />
+
+            {/* Le choix de l'echelle n'apparait que si la colonne existe,
+                pour la meme raison que la sonnerie sous le son. */}
+            {settings.rpeEnabled && (
+              <EffortScalePicker
+                value={settings.effortScale ?? 'rpe'}
+                onChange={(effortScale) => patch({ effortScale })}
+              />
+            )}
             <Toggle
               label="Vibration en fin de repos"
               hint="Fonctionne sur Android. iOS ne donne accès à aucune vibration depuis le web."
@@ -612,6 +622,78 @@ function CustomWeightSheet({
         </Button>
       </div>
     </Sheet>
+  );
+}
+
+const SCALES: Array<{ id: EffortScale; label: string; meaning: string; example: string }> = [
+  {
+    id: 'rir',
+    label: 'RIR',
+    meaning: 'Répétitions en réserve',
+    example: 'RIR 2 : tu aurais pu en faire encore 2. RIR 0 : plus une seule.',
+  },
+  {
+    id: 'rpe',
+    label: 'RPE',
+    meaning: 'Effort perçu sur 10',
+    example: 'RPE 8 : il en restait 2. RPE 10 : effort maximal.',
+  },
+];
+
+/**
+ * RIR ou RPE. Deux facons de dire la meme chose (RIR = 10 - RPE), on garde
+ * donc la meme donnee et on change seulement la maniere de la lire : changer
+ * d'avis ne perd rien, l'historique se relit aussitot dans la nouvelle echelle.
+ */
+function EffortScalePicker({
+  value,
+  onChange,
+}: {
+  value: EffortScale;
+  onChange: (scale: EffortScale) => void;
+}) {
+  const active = SCALES.find((s) => s.id === value) ?? SCALES[1]!;
+  return (
+    <div className="px-4 py-3">
+      <p className="text-[15px] font-semibold">Échelle d’effort</p>
+      <div
+        role="radiogroup"
+        aria-label="Échelle d’effort"
+        className="mt-2.5 grid grid-cols-2 gap-1 rounded-xl bg-alt p-1"
+      >
+        {SCALES.map((scale) => {
+          const selected = scale.id === value;
+          return (
+            <button
+              key={scale.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(scale.id)}
+              className={cx(
+                'pressable min-h-[44px] rounded-lg px-2 py-1.5 text-center transition-colors duration-200',
+                selected ? 'bg-white shadow-sm' : 'text-ink-2',
+              )}
+            >
+              <span
+                className={cx(
+                  'block font-display text-[15px] font-extrabold',
+                  selected && 'text-accent',
+                )}
+              >
+                {scale.label}
+              </span>
+              <span className="block text-[11.5px] leading-tight text-ink-2">{scale.meaning}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[13px] leading-snug text-ink-2">{active.example}</p>
+      <p className="mt-1 text-[13px] leading-snug text-ink-3">
+        Les deux disent la même chose : RIR = 10 − RPE. Changer d’échelle ne modifie rien, ton
+        historique se relit simplement dans la nouvelle.
+      </p>
+    </div>
   );
 }
 

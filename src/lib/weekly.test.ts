@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { bucketByWeek, daysTrainedThisWeek, goalStreak, startOfWeek } from './weekly';
+import {
+  bucketByWeek,
+  daysTrainedThisWeek,
+  goalStreak,
+  startOfWeek,
+  weekStreak,
+} from './weekly';
 
 /** Mercredi 15 juillet 2026, midi. */
 const NOW = new Date(2026, 6, 15, 12, 0, 0);
@@ -90,5 +96,55 @@ describe('daysTrainedThisWeek', () => {
     expect(daysTrainedThisWeek([new Date(2026, 6, 1).getTime()], NOW)).toEqual(
       Array.from({ length: 7 }, () => false),
     );
+  });
+});
+
+describe('weekStreak', () => {
+  /** Une seance le lundi `weeksAgo` semaines avant la semaine de NOW. */
+  const monday = (weeksAgo: number, hour = 9): number =>
+    new Date(2026, 6, 13 - weeksAgo * 7, hour).getTime();
+
+  it('remonte tout l’historique, au-delà des huit semaines du graphique', () => {
+    const sessions = Array.from({ length: 12 }, (_, i) => [monday(i), monday(i, 18)]).flat();
+    const streak = weekStreak(sessions, 2, NOW);
+    expect(streak.current).toBe(12);
+    expect(streak.best).toBe(12);
+    expect(streak.thisWeekDone).toBe(true);
+  });
+
+  it('garde la flamme en vie une semaine en cours pas encore tenue', () => {
+    const streak = weekStreak([monday(1), monday(2), monday(3)], 1, new Date(2026, 6, 13, 7));
+    expect(streak.current).toBe(3);
+    expect(streak.thisWeekDone).toBe(false);
+    expect(streak.remaining).toBe(1);
+  });
+
+  it('s’éteint quand une semaine passée a été manquée', () => {
+    const streak = weekStreak([monday(2), monday(3), monday(4)], 1, NOW);
+    expect(streak.current).toBe(0);
+    expect(streak.best).toBe(3);
+  });
+
+  it('sans objectif, une séance suffit à tenir la semaine', () => {
+    const streak = weekStreak([monday(0), monday(1)], 0, NOW);
+    expect(streak.target).toBe(1);
+    expect(streak.current).toBe(2);
+  });
+
+  it('ne compte pas une semaine sous l’objectif', () => {
+    const streak = weekStreak([monday(0), monday(1), monday(1, 18)], 2, NOW);
+    expect(streak.current).toBe(1);
+    expect(streak.thisWeekDone).toBe(false);
+    expect(streak.remaining).toBe(1);
+  });
+
+  it('part de zéro sans aucune séance', () => {
+    expect(weekStreak([], 3, NOW)).toEqual({
+      current: 0,
+      thisWeekDone: false,
+      remaining: 3,
+      best: 0,
+      target: 3,
+    });
   });
 });

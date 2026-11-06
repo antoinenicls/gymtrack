@@ -83,6 +83,12 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '.55' },
         },
+        /* La flamme de regularite vacille, ancree a sa base. */
+        flame: {
+          '0%, 100%': { transform: 'scale(1, 1) rotate(0deg)' },
+          '30%': { transform: 'scale(.97, 1.04) rotate(-1.5deg)' },
+          '60%': { transform: 'scale(1.02, .98) rotate(1deg)' },
+        },
       },
       animation: {
         'pr-pop': 'pr-pop .38s cubic-bezier(.16, 1, .3, 1)',
@@ -96,6 +102,7 @@ export default {
         'check-pop': 'check-pop .3s cubic-bezier(.16, 1, .3, 1)',
         draw: 'draw .9s cubic-bezier(.16, 1, .3, 1) forwards',
         'pulse-soft': 'pulse-soft 1s ease-in-out infinite',
+        flame: 'flame 2.6s ease-in-out infinite',
       },
     },
   },

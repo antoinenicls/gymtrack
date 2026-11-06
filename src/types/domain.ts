@@ -6,6 +6,7 @@
  */
 
 import type { ChimeId } from '@/lib/restChime';
+import type { EffortScale } from '@/lib/effort';
 import type { GymBrand } from './gym';
 
 export type MuscleGroup =
@@ -277,6 +278,14 @@ export interface Settings {
   weightStepKg: number;
   /** Affiche la saisie du RPE. Certains athletes ne veulent pas s'en occuper. */
   rpeEnabled: boolean;
+  /**
+   * Echelle dans laquelle l'effort se LIT et se SAISIT : RPE ou RIR.
+   *
+   * Pure affaire d'affichage : la base stocke toujours du RPE (cf. lib/effort).
+   * Optionnelle pour qu'une base d'avant le reglage s'ouvre sans migration ;
+   * absente, c'est le RPE, ce que l'app affichait jusque-la.
+   */
+  effortScale?: EffortScale;
   /** Version du catalogue d'exercices deja injectee, pour rejouer le seed. */
   seedVersion?: number;
   /**

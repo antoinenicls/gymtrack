@@ -18,6 +18,8 @@ import { DropGroup } from '@/ui/DropGroup';
 import { supersetLetters, supersetRuns } from '@/lib/superset';
 import { SupersetGroup, SupersetTag } from '@/ui/SupersetGroup';
 import { Button, EmptyState, PrBadge, Sheet, Stat, cx } from '@/ui/primitives';
+import { EFFORT_LABEL, formatEffort, formatEffortValue } from '@/lib/effort';
+import { useEffortScale } from '@/services/useEffortScale';
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
@@ -32,6 +34,7 @@ export default function WorkoutDetailPage() {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Map<string, Exercise>>(new Map());
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const effortScale = useEffortScale();
 
   useEffect(() => {
     void (async () => {
@@ -70,7 +73,10 @@ export default function WorkoutDetailPage() {
       <div className="mt-5 grid grid-cols-3 gap-3 px-4">
         <Stat value={formatDuration(workout.durationSec ?? 0)} label="Durée" />
         <Stat value={formatVolume(workoutVolume(workout))} label="Volume" accent="accent" />
-        <Stat value={rpe !== null ? String(rpe).replace('.', ',') : '-'} label="RPE moyen" />
+        <Stat
+          value={rpe !== null ? formatEffortValue(rpe, effortScale) : '-'}
+          label={`${EFFORT_LABEL[effortScale]} moyen`}
+        />
       </div>
 
       {workout.notes && (
@@ -155,7 +161,7 @@ export default function WorkoutDetailPage() {
                         </span>
                         {set.rpe !== null && (
                           <span className="num text-[13px] text-ink-2">
-                            RPE {formatWeight(set.rpe)}
+                            {formatEffort(set.rpe, effortScale)}
                           </span>
                         )}
                         {(set.prKinds?.length ?? 0) > 0 ? (

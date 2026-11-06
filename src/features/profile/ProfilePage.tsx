@@ -1,15 +1,16 @@
-/** Profil : assiduite, objectif hebdomadaire, records. */
+/** Profil : flamme de regularite, assiduite, objectif hebdomadaire, records. */
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Minus, Plus, Settings, User } from 'lucide-react';
+import { ChevronRight, Minus, Plus, Settings } from 'lucide-react';
 import type { Exercise, PersonalRecord, Settings as AppSettings, Workout } from '@/types/domain';
 import { exerciseRepo, recordRepo, settingsRepo, workoutRepo } from '@/services/repositories';
-import { bucketByWeek, daysTrainedThisWeek, goalStreak } from '@/lib/weekly';
+import { bucketByWeek, daysTrainedThisWeek, weekStreak } from '@/lib/weekly';
 import { entryWorkingSetCount, formatVolume, formatWeight, workoutVolume } from '@/lib/metrics';
 import { Card, EmptyState, PageTitle, SectionLabel, Stat, cx } from '@/ui/primitives';
 import WeeklyGoalWidget from './WeeklyGoalWidget';
 import YearHeatmap from './YearHeatmap';
+import StreakCard from './StreakCard';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEKS_SHOWN = 8;
@@ -41,7 +42,9 @@ export default function ProfilePage() {
   // maximum etait 14) doit se rattraper tout seul, sans migration.
   const goal = Math.min(MAX_GOAL, settings?.weeklyGoal ?? 0);
   const thisWeek = weeks[weeks.length - 1];
-  const streak = useMemo(() => goalStreak(weeks, goal), [weeks, goal]);
+  // Sur tout l'historique, et non sur les huit semaines du graphique : une
+  // flamme plafonnee a 8 mentirait des la neuvieme semaine.
+  const streak = useMemo(() => weekStreak(startedAt, goal), [startedAt, goal]);
 
   const last7 = workouts.filter((w) => w.startedAt > Date.now() - WEEK_MS);
   const weekVolume = last7.reduce((sum, w) => sum + workoutVolume(w), 0);
@@ -82,27 +85,11 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      {/* Bilan general. Pas de compte : tout vit sur cet appareil. */}
+      {/* La flamme et le total. Il n'y a pas de compte : la carte qui
+          l'evoquait (avatar, « Mes entraînements ») donnait envie de la
+          toucher sans que rien ne se passe. On montre les chiffres. */}
       <div className="mt-3 px-4">
-        <Card className="flex items-center gap-3 p-3.5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-alt text-ink-3">
-            <User size={26} strokeWidth={2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-[17px] font-extrabold tracking-[-0.03em]">
-              Mes entraînements
-            </p>
-            <p className="text-[13px] text-ink-2">Tout reste sur ce téléphone</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="num font-display text-[24px] font-black leading-none">{workouts.length}</p>
-            <p className="mt-1 text-[11px] leading-tight text-ink-2">
-              séance{workouts.length > 1 ? 's' : ''}
-              <br />
-              au total
-            </p>
-          </div>
-        </Card>
+        <StreakCard streak={streak} totalWorkouts={workouts.length} />
       </div>
 
       {/* Objectif hebdomadaire. */}
@@ -175,15 +162,6 @@ export default function ProfilePage() {
             <WeeklyGoalWidget weeks={weeks} goal={goal} />
           </div>
 
-          {goal > 0 && streak > 0 && (
-            <p className="mt-4 text-[13px] leading-relaxed text-ink-2">
-              <strong className="font-display text-ink">
-                {streak} semaine{streak > 1 ? 's' : ''}
-              </strong>{' '}
-              d’affilée à ton objectif. La semaine en cours ne casse jamais la série tant qu’elle
-              n’est pas finie.
-            </p>
-          )}
         </Card>
       </section>
 

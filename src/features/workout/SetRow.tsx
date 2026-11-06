@@ -17,6 +17,7 @@ import { formatWeight } from '@/lib/metrics';
 import { previousFill } from '@/lib/previousFill';
 import { tapFeedback } from '@/services/feedback';
 import { useDecimalInput } from '@/ui/useDecimalInput';
+import { EFFORT_LABEL, fromScale, toScale, type EffortScale } from '@/lib/effort';
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -32,6 +33,8 @@ interface SetRowProps {
   /** Prestation de la derniere seance sur ce meme rang de serie. */
   previous: WorkoutSet | null;
   showRpe: boolean;
+  /** Echelle de la colonne d'effort. La valeur stockee reste un RPE. */
+  effortScale: EffortScale;
   onChange: (patch: Partial<WorkoutSet>) => void;
   /** Ouvre le menu de la serie : son type, et sa suppression. */
   onOpenMenu: () => void;
@@ -45,6 +48,7 @@ export default function SetRow({
   hideTypeLetter = false,
   previous,
   showRpe,
+  effortScale,
   onChange,
   onOpenMenu,
   onToggleDone,
@@ -186,13 +190,15 @@ export default function SetRow({
 
       {showRpe && (
         <NumberCell
-          value={set.rpe}
+          value={toScale(set.rpe, effortScale)}
           placeholder="-"
-          onChange={(v) => onChange({ rpe: v === null ? null : clamp(v, 1, 10) })}
+          // Saisi dans l'echelle choisie, stocke en RPE et borne : un RIR 2
+          // s'enregistre RPE 8, et l'historique se relit dans les deux.
+          onChange={(v) => onChange({ rpe: fromScale(v, effortScale) })}
           done={set.done}
-          label={`RPE série ${index + 1}`}
+          label={`${EFFORT_LABEL[effortScale]} série ${index + 1}`}
           step={0.5}
-          // L'echelle RPE se note au demi-point : 7,5 oui, 7,25 non.
+          // L'effort se note au demi-point : 7,5 oui, 7,25 non.
           maxDecimals={1}
         />
       )}
@@ -276,8 +282,4 @@ function NumberCell({
       )}
     />
   );
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, n));
 }

@@ -13,6 +13,7 @@ import { RestBetweenSets } from '@/ui/RestBetweenSets';
 import { DropGroup } from '@/ui/DropGroup';
 import { setGroups, setNumbers } from '@/lib/dropset';
 import { isToFailure } from '@/lib/setTypes';
+import { EFFORT_LABEL, type EffortScale } from '@/lib/effort';
 import ExerciseNote from './ExerciseNote';
 import SetRow from './SetRow';
 
@@ -22,6 +23,8 @@ interface ExerciseBlockProps {
   /** Series de la derniere seance sur cet exercice, rang par rang. */
   previousSets: WorkoutSet[];
   showRpe: boolean;
+  /** Echelle de la colonne d'effort : RPE ou RIR. */
+  effortScale: EffortScale;
   /** Vrai si ce bloc est enchaine avec le precedent. */
   linkedToPrevious: boolean;
   /** Rang dans le superset (« A1 »), ou null hors superset. */
@@ -43,6 +46,7 @@ export default function ExerciseBlock({
   exercise,
   previousSets,
   showRpe,
+  effortScale,
   linkedToPrevious,
   supersetTag = null,
   canLink,
@@ -150,7 +154,7 @@ export default function ExerciseBlock({
         <ColumnHead>Précédent</ColumnHead>
         <ColumnHead>kg</ColumnHead>
         <ColumnHead>Reps</ColumnHead>
-        {showRpe && <ColumnHead>RPE</ColumnHead>}
+        {showRpe && <ColumnHead>{EFFORT_LABEL[effortScale]}</ColumnHead>}
         <ColumnHead className="text-right pr-2">✓</ColumnHead>
       </div>
 
@@ -193,6 +197,7 @@ export default function ExerciseBlock({
                   hideTypeLetter={isDrop}
                   previous={previous}
                   showRpe={showRpe}
+                  effortScale={effortScale}
                   onChange={(patch) => onChangeSet(set.id, patch)}
                   onOpenMenu={() => onOpenSetMenu(set.id)}
                   onToggleDone={() => onToggleSetDone(set.id)}

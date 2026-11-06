@@ -47,6 +47,7 @@ import {
 import type { PlannedReps } from '@/lib/plannedWeek';
 import { formatDuration, formatVolume, formatWeight } from '@/lib/metrics';
 import { volumeByMuscleGroup } from '@/lib/metrics';
+import { EFFORT_LABEL, toScale } from '@/lib/effort';
 import { BarList, ColumnChart, LineChart, TargetBarList, TrainingHeatmap } from '@/ui/charts';
 import { Card, PrBadge, cx } from '@/ui/primitives';
 import ExerciseChooser, { type ChoosableExercise } from './ExerciseChooser';
@@ -190,7 +191,7 @@ export const ANALYSIS_CARDS: AnalysisCardDef[] = [
   {
     id: 'intensite',
     title: 'Intensité ressentie',
-    description: 'Le RPE moyen semaine après semaine.',
+    description: 'L’effort moyen ressenti (RPE ou RIR) semaine après semaine.',
     hiddenByDefault: true,
     // Sans RPE saisi, la carte n'aurait qu'une ligne plate a montrer.
     isRelevant: (context) =>
@@ -885,9 +886,13 @@ function DormantCard({ context }: { context: AnalysisContext }) {
 }
 
 function IntensityCard({ context }: { context: AnalysisContext }) {
+  const scale = context.settings.effortScale ?? 'rpe';
+  const label = EFFORT_LABEL[scale];
+  // La moyenne est calculee en RPE ; la conversion etant lineaire, la
+  // convertir apres coup donne exactement la moyenne des RIR.
   const points = context.weeks
     .filter((week) => week.avgRpe !== null)
-    .map((week) => ({ x: week.start, y: week.avgRpe as number }));
+    .map((week) => ({ x: week.start, y: toScale(week.avgRpe, scale) as number }));
 
   return (
     <>
@@ -896,13 +901,15 @@ function IntensityCard({ context }: { context: AnalysisContext }) {
           points={points}
           formatValue={(value) => value.toFixed(1).replace('.', ',')}
           formatPoint={(point) =>
-            `${SHORT_FMT.format(point.x)} · RPE ${point.y.toFixed(1).replace('.', ',')}`
+            `${SHORT_FMT.format(point.x)} · ${label} ${point.y.toFixed(1).replace('.', ',')}`
           }
         />
       </Card>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
-        Un RPE moyen qui grimpe alors que les charges stagnent est le signe le plus fiable d’une
-        fatigue qui s’accumule.
+        {scale === 'rir'
+          ? 'Un RIR moyen qui baisse alors que les charges stagnent'
+          : 'Un RPE moyen qui grimpe alors que les charges stagnent'}{' '}
+        est le signe le plus fiable d’une fatigue qui s’accumule.
       </p>
     </>
   );
