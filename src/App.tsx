@@ -27,6 +27,7 @@ import RoutineDetailPage from './features/routines/RoutineDetailPage';
 import SettingsPage from './features/profile/SettingsPage';
 import RestTimerBar from './features/workout/RestTimerBar';
 import MiniSessionBar from './features/workout/MiniSessionBar';
+import IOSInstallPrompt from './features/onboarding/IOSInstallPrompt';
 
 const TABS = [
   { to: '/profil', label: 'Profil', Icon: User },
@@ -120,6 +121,9 @@ export default function App() {
           d'un onglet a l'autre, ce qui est voulu : le repos continue de
           tourner si l'athlete va consulter un exercice entre deux series. */}
       <RestTimerBar />
+
+      {/* Invitation a installer l'app, Safari iOS seulement. */}
+      <IOSInstallPrompt />
 
       <nav
         className="relative z-30 shrink-0 border-t border-line bg-white/95 backdrop-blur"

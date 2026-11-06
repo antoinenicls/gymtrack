@@ -345,6 +345,11 @@ export interface Settings {
    * qui est masque : un dossier cree plus tard s'ouvre alors de lui-meme.
    */
   collapsedFolders?: string[];
+  /**
+   * Derniere fois que l'invitation a installer l'app sur iPhone a ete
+   * ecartee. Absent = jamais. Elle ne revient pas avant deux semaines.
+   */
+  iosPromptDismissedAt?: number;
 }
 
 /**
