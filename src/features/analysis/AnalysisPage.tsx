@@ -33,7 +33,7 @@ import {
   workoutRepo,
 } from '@/services/repositories';
 import { weeklyStats } from '@/lib/analytics';
-import { plannedReps, plannedSessions, plannedWeek } from '@/lib/plannedWeek';
+import { pickedRoutines, plannedReps, plannedSessions, plannedWeek } from '@/lib/plannedWeek';
 import { Button, EmptyState, IconButton, PageTitle, cx } from '@/ui/primitives';
 import CustomizeSheet from './CustomizeSheet';
 import PlanSheet from './PlanSheet';
@@ -116,7 +116,11 @@ export default function AnalysisPage() {
         // Une semaine type est, par definition, une semaine.
         weekCount: 1,
         settings,
-        plan: { sessions: plannedSessions(routines, picks), reps: plannedReps(routines, picks) },
+        plan: {
+          sessions: plannedSessions(routines, picks),
+          reps: plannedReps(routines, picks),
+          picked: pickedRoutines(routines, picks),
+        },
       };
     }
 
@@ -199,7 +203,7 @@ export default function AnalysisPage() {
               </button>
             ))}
           </div>
-          {/* Absent en mode programme : il n'y propose que trois cartes, et
+          {/* Absent en mode programme : il affiche toutes ses cartes, et
               ranger celles-ci reecrirait l'ordre de l'historique. */}
           <IconButton
             label="Personnaliser l’analyse"

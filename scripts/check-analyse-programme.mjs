@@ -4,7 +4,8 @@
  * On range trois routines dans un dossier, on compose la semaine type depuis
  * l'ecran (le dossier entier, puis Push une seconde fois), et on verifie que
  * l'analyse porte bien sur CETTE semaine : quatre seances, les seules cartes
- * qui ont un sens sur un programme, et les pectoraux comptes deux fois.
+ * qui ont un sens sur un programme, les pectoraux comptes deux fois, et les
+ * muscles absents du programme nommes comme tels.
  */
 
 import { chromium, devices } from 'playwright';
@@ -114,9 +115,12 @@ await page.waitForTimeout(800);
 await page.screenshot({ path: `${OUT}/programme-haut.png` });
 
 const main = page.locator('main');
-await main.evaluate((element) => element.scrollTo(0, 900));
-await page.waitForTimeout(600);
-await page.screenshot({ path: `${OUT}/programme-bas.png` });
+const height = await main.evaluate((element) => element.scrollHeight);
+for (let y = 700, n = 1; y < height; y += 700, n++) {
+  await main.evaluate((element, top) => element.scrollTo(0, top), y);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${OUT}/programme-bas-${n}.png` });
+}
 
 const titles = await page.locator('section > h2.section-label').allTextContents();
 const text = await main.textContent();
@@ -128,7 +132,12 @@ const kept = await page.getByText('4 séances par semaine').count();
 
 const checks = {
   footer: footer?.includes('4 séances'),
-  cartes: titles.join('|') === 'Séries par groupe musculaire|Respect des normes|Répartition des séries',
+  cartes:
+    titles.join('|') ===
+    'Séance par séance|Séries par groupe musculaire|Respect des normes|Équilibres|Répartition des séries|Repos prévu|Intensité prévue',
+  duree: text.includes('D’entraînement par semaine'),
+  absents: text.includes('Aucune série : '),
+  repos: text.includes('4 / 4'),
   rythme: text.includes('Ton programme compte 4 séances par semaine'),
   pectoraux: text.includes('8,0 /sem'),
   sansCible: text.includes('1 série sans répétitions visées'),

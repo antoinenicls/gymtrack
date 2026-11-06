@@ -113,6 +113,38 @@ export function muscleNorms(
     .sort((a, b) => b.setsPerWeek - a.setsPerWeek);
 }
 
+/**
+ * Muscles qu'on s'attend a voir travailler directement.
+ *
+ * Les avant-bras sont ecartes : ils travaillent a chaque tirage, et un
+ * programme sans exercice dedie n'a rien d'un oubli. Le cardio n'est pas un
+ * muscle et n'a pas de norme en series.
+ */
+export const MONITORED_GROUPS: MuscleGroup[] = [
+  'pectoraux',
+  'dos',
+  'epaules',
+  'biceps',
+  'triceps',
+  'quadriceps',
+  'ischios',
+  'fessiers',
+  'mollets',
+  'abdominaux',
+];
+
+/**
+ * Muscles surveilles qui ne recoivent AUCUNE serie.
+ *
+ * Les lignes de normes ne portent que les muscles travailles : un programme
+ * sans un seul exercice d'ischios affichait donc « 6 / 6 muscles dans la
+ * zone », en vert, alors que le trou etait precisement ce qu'il fallait voir.
+ */
+export function absentGroups(trained: Iterable<MuscleGroup>): MuscleGroup[] {
+  const present = new Set(trained);
+  return MONITORED_GROUPS.filter((group) => !present.has(group));
+}
+
 /* -------------------------------------------------------------------------- */
 /* Repetitions                                                                 */
 /* -------------------------------------------------------------------------- */

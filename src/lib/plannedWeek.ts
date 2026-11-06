@@ -41,7 +41,7 @@ const COUNTED_WITHOUT_TARGET = 1;
 export function plannedWeek(routines: Routine[], picks: PlanPick[]): Workout[] {
   const workouts: Workout[] = [];
 
-  for (const { routine, times } of resolve(routines, picks)) {
+  for (const { routine, times } of pickedRoutines(routines, picks)) {
     for (let n = 0; n < times; n++) {
       const startedAt = ORIGIN + workouts.length * DAY;
       workouts.push({
@@ -79,7 +79,7 @@ export function plannedReps(routines: Routine[], picks: PlanPick[]): PlannedReps
   const spread = emptySpread();
   let unknown = 0;
 
-  for (const { routine, times } of resolve(routines, picks)) {
+  for (const { routine, times } of pickedRoutines(routines, picks)) {
     for (const item of routine.items) {
       for (const set of item.sets) {
         if (set.type === 'echauffement') continue;
@@ -96,7 +96,7 @@ export function plannedReps(routines: Routine[], picks: PlanPick[]): PlannedReps
 
 /** Nombre de seances de la semaine type. */
 export function plannedSessions(routines: Routine[], picks: PlanPick[]): number {
-  return resolve(routines, picks).reduce((sum, { times }) => sum + times, 0);
+  return pickedRoutines(routines, picks).reduce((sum, { times }) => sum + times, 0);
 }
 
 /** Series de travail d'une routine, une degressive comptant pour une. */
@@ -106,6 +106,12 @@ export function routineSetCount(routine: Routine): number {
 
 /* -------------------------------------------------------------------------- */
 
+/** Une routine de la semaine type, et le nombre de fois qu'elle revient. */
+export interface PickedRoutine {
+  routine: Routine;
+  times: number;
+}
+
 /**
  * Choix encore valables.
  *
@@ -113,7 +119,7 @@ export function routineSetCount(routine: Routine): number {
  * plutot que de nettoyer les reglages en douce, ce qui suffit puisqu'elle ne
  * reviendra jamais.
  */
-function resolve(routines: Routine[], picks: PlanPick[]): Array<{ routine: Routine; times: number }> {
+export function pickedRoutines(routines: Routine[], picks: PlanPick[]): PickedRoutine[] {
   const byId = new Map(routines.map((routine) => [routine.id, routine]));
   return picks.flatMap((pick) => {
     const routine = byId.get(pick.routineId);

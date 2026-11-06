@@ -34,6 +34,7 @@ import {
 } from '@/lib/analytics';
 import {
   NORMS,
+  absentGroups,
   formatAdvice,
   muscleNorms,
   repsSpread,
@@ -44,8 +45,23 @@ import {
   type NormState,
   type RepsSpread,
 } from '@/lib/norms';
-import type { PlannedReps } from '@/lib/plannedWeek';
-import { formatDuration, formatVolume, formatWeight } from '@/lib/metrics';
+import type { PickedRoutine, PlannedReps } from '@/lib/plannedWeek';
+import {
+  DURATION_ASSUMPTIONS,
+  REST_NORMS,
+  exercisesByMuscle,
+  muscleBalances,
+  plannedEffort,
+  restReview,
+  routineInsights,
+  type BalanceRow,
+} from '@/lib/programInsights';
+import {
+  formatApproxDuration,
+  formatDuration,
+  formatVolume,
+  formatWeight,
+} from '@/lib/metrics';
 import { volumeByMuscleGroup } from '@/lib/metrics';
 import { EFFORT_LABEL, toScale } from '@/lib/effort';
 import { BarList, ColumnChart, LineChart, TargetBarList, TrainingHeatmap } from '@/ui/charts';
@@ -87,6 +103,8 @@ export interface AnalysisContext {
 export interface PlanSummary {
   sessions: number;
   reps: PlannedReps;
+  /** Les routines retenues, lues directement : repos, effort vise, duree. */
+  picked: PickedRoutine[];
 }
 
 export interface AnalysisCardDef {
@@ -116,6 +134,15 @@ export const ANALYSIS_CARDS: AnalysisCardDef[] = [
     title: 'En bref',
     description: 'Séances, tonnage, rythme hebdomadaire et série de jours en cours.',
     render: (context) => <SummaryCard context={context} />,
+  },
+  {
+    id: 'seances',
+    title: 'Séance par séance',
+    description: 'Durée estimée, nombre de séries et muscles travaillés de chaque séance.',
+    // Rangee en tete du catalogue : c'est la premiere chose qu'on veut savoir
+    // d'un programme, et le resume qui la precede n'existe qu'en historique.
+    modes: ['programme'],
+    render: (context) => <SessionsCard context={context} />,
   },
   {
     id: 'volume',
@@ -156,6 +183,15 @@ export const ANALYSIS_CARDS: AnalysisCardDef[] = [
     render: (context) => <NormsCard context={context} />,
   },
   {
+    id: 'equilibres',
+    title: 'Équilibres',
+    description: 'Tirage face à poussée, arrière face à avant de la jambe, haut face à bas du corps.',
+    modes: ['historique', 'programme'],
+    isRelevant: (context) =>
+      context.workouts.length >= (context.mode === 'programme' ? 1 : 3),
+    render: (context) => <BalanceCard context={context} />,
+  },
+  {
     id: 'regularite',
     title: 'Régularité',
     description: 'Le calendrier de tes jours d’entraînement, trous compris.',
@@ -181,6 +217,22 @@ export const ANALYSIS_CARDS: AnalysisCardDef[] = [
     // toujours renseignees : compter les series ne depend que de la structure.
     modes: ['programme'],
     render: (context) => <SetsShareCard context={context} />,
+  },
+  {
+    id: 'repos-prevu',
+    title: 'Repos prévu',
+    description: 'Les repos prescrits, confrontés à la lourdeur des séries.',
+    // Programme seul : une seance faite n'enregistre pas le repos reellement
+    // pris (voir norms.ts), alors qu'une routine l'ecrit noir sur blanc.
+    modes: ['programme'],
+    render: (context) => <RestCard context={context} />,
+  },
+  {
+    id: 'intensite-prevue',
+    title: 'Intensité prévue',
+    description: 'La part des séries menées à l’échec, et l’effort visé sur les autres.',
+    modes: ['programme'],
+    render: (context) => <PlannedEffortCard context={context} />,
   },
   {
     id: 'dormants',
@@ -462,22 +514,51 @@ function ExerciseCard({ context }: { context: AnalysisContext }) {
   );
 }
 
+/**
+ * Series hebdomadaires par muscle.
+ *
+ * Les muscles surveilles qui ne recoivent rien sont listes a zero, en bas :
+ * sans eux, un programme sans ischios n'avait aucune barre qui le trahisse.
+ * En mode programme, chaque barre nomme aussi ses mouvements, pour qu'un
+ * muscle tenu par un seul exercice se voie.
+ */
 function MuscleSetsCard({ context }: { context: AnalysisContext }) {
-  const { workouts, exercises, weekCount } = context;
+  const { workouts, exercises, weekCount, plan } = context;
 
   const rows = useMemo(
     () => muscleLoad(workouts, (id) => exercises.get(id)?.muscleGroup, weekCount),
     [workouts, exercises, weekCount],
   );
+  const movements = useMemo(
+    () =>
+      plan ? exercisesByMuscle(plan.picked, (id) => exercises.get(id)?.muscleGroup) : null,
+    [plan, exercises],
+  );
+  const absent = absentGroups(rows.map((row) => row.group));
+
+  const nameOf = (id: string): string => exercises.get(id)?.name ?? 'Exercice supprimé';
+  const single = movements
+    ? rows.filter(
+        (row) => row.setsPerWeek >= SETS_ZONE.from && (movements.get(row.group)?.length ?? 0) === 1,
+      )
+    : [];
 
   return (
     <>
       <Card className="p-4">
         <TargetBarList
-          items={rows.map((row) => ({
-            label: MUSCLE_GROUP_LABELS[row.group],
-            value: row.setsPerWeek,
-          }))}
+          items={[
+            ...rows.map((row) => ({
+              label: MUSCLE_GROUP_LABELS[row.group],
+              value: row.setsPerWeek,
+              hint: movements?.get(row.group)?.map(nameOf).join(' · '),
+            })),
+            ...absent.map((group) => ({
+              label: MUSCLE_GROUP_LABELS[group],
+              value: 0,
+              hint: 'Aucune série',
+            })),
+          ]}
           zone={SETS_ZONE}
           formatValue={(value) => `${value.toFixed(1).replace('.', ',')} /sem`}
         />
@@ -487,6 +568,12 @@ function MuscleSetsCard({ context }: { context: AnalysisContext }) {
         grandeur le plus souvent cité pour l’hypertrophie. C’est un repère, pas une règle : un
         groupe sous la zone n’est un problème que s’il fait partie de tes priorités.
       </p>
+      {single.length > 0 && (
+        <p className="mt-1 text-[13px] leading-relaxed text-ink-3">
+          Un seul mouvement pour {list(single.map((row) => lower(MUSCLE_GROUP_LABELS[row.group])))}.
+          Varier l’angle ou l’outil répartit mieux le travail sur tout le muscle.
+        </p>
+      )}
     </>
   );
 }
@@ -505,6 +592,21 @@ function NormsCard({ context }: { context: AnalysisContext }) {
   const rows = useMemo(
     () => muscleNorms(workouts, (id) => exercises.get(id)?.muscleGroup, weekCount),
     [workouts, exercises, weekCount],
+  );
+  // Les muscles sans aucune serie comptent dans les normes hebdomadaires,
+  // ou ils sont le premier ecart a voir. Pas dans la norme par seance, qui
+  // decrit un muscle QUAND il est travaille.
+  const withAbsent = useMemo<MuscleNormRow[]>(
+    () => [
+      ...rows,
+      ...absentGroups(rows.map((row) => row.group)).map((group) => ({
+        group,
+        setsPerWeek: 0,
+        sessionsPerWeek: 0,
+        setsPerSession: 0,
+      })),
+    ],
+    [rows],
   );
   const perSession = useMemo(() => sessionSetCounts(workouts), [workouts]);
   // Les reps d'un programme se lisent dans ses routines : les seances
@@ -528,7 +630,7 @@ function NormsCard({ context }: { context: AnalysisContext }) {
         <MuscleNormLine
           label="Séries par muscle et par semaine"
           range={NORMS.setsPerMuscleWeek}
-          rows={rows}
+          rows={withAbsent}
           valueOf={(row) => row.setsPerWeek}
         />
         <MuscleNormLine
@@ -540,7 +642,7 @@ function NormsCard({ context }: { context: AnalysisContext }) {
         <MuscleNormLine
           label="Passages par muscle et par semaine"
           range={NORMS.muscleFrequency}
-          rows={rows}
+          rows={withAbsent}
           valueOf={(row) => row.sessionsPerWeek}
         />
       </Card>
@@ -633,17 +735,18 @@ function MuscleNormLine({
   const states = rows.map((row) => stateOf(valueOf(row), range));
   const inZone = states.filter((state) => state === 'dans').length;
 
-  // Les libelles sont capitalises parce qu'ils servent ailleurs d'etiquettes
-  // autonomes. Ici ils sont enumeres dans une phrase, apres deux-points : des
-  // noms communs, donc en minuscule.
-  const name = (index: number): string => {
-    const label = MUSCLE_GROUP_LABELS[rows[index]!.group];
-    return label.charAt(0).toLocaleLowerCase('fr') + label.slice(1);
-  };
-  const below = states.map((s, i) => (s === 'dessous' ? name(i) : '')).filter(Boolean);
+  const name = (index: number): string => lower(MUSCLE_GROUP_LABELS[rows[index]!.group]);
+  // Un muscle sans aucune serie est nomme a part : « sous la zone » laisserait
+  // croire qu'il est travaille, juste pas assez.
+  const isAbsent = (index: number): boolean => rows[index]!.setsPerWeek === 0;
+  const absent = rows.map((_r, i) => (isAbsent(i) ? name(i) : '')).filter(Boolean);
+  const below = states
+    .map((s, i) => (s === 'dessous' && !isAbsent(i) ? name(i) : ''))
+    .filter(Boolean);
   const above = states.map((s, i) => (s === 'dessus' ? name(i) : '')).filter(Boolean);
 
   const detail = [
+    absent.length > 0 ? `Aucune série : ${list(absent)}.` : '',
     below.length > 0 ? `Sous la zone : ${list(below)}.` : '',
     above.length > 0 ? `Au-dessus : ${list(above)}.` : '',
   ]
@@ -658,7 +761,13 @@ function MuscleNormLine({
       range={range}
       // Tout dans la zone, ou rien a redire : le vert n'est merite que par le
       // sans-faute, sinon il recompenserait une majorite mediocre.
-      state={inZone === rows.length ? 'dans' : above.length > below.length ? 'dessus' : 'dessous'}
+      state={
+        inZone === rows.length
+          ? 'dans'
+          : above.length > below.length + absent.length
+            ? 'dessus'
+            : 'dessous'
+      }
       detail={detail || undefined}
     />
   );
@@ -682,12 +791,28 @@ function RepsBar({ spread }: { spread: RepsSpread }) {
     return <p className="text-[13px] text-ink-3">Aucune série à répartir.</p>;
   }
 
-  const pct = (n: number): number => (n / spread.total) * 100;
-  const segments = [
-    { key: 'below', n: spread.below, label: `moins de ${NORMS.reps.from}`, tone: 'bg-line-2' },
-    { key: 'inZone', n: spread.inZone, label: `${NORMS.reps.from} à ${NORMS.reps.to}`, tone: 'bg-accent' },
-    { key: 'above', n: spread.above, label: `plus de ${NORMS.reps.to}`, tone: 'bg-line-2' },
-  ].filter((segment) => segment.n > 0);
+  return (
+    <SpreadBar
+      segments={[
+        { key: 'below', n: spread.below, label: `moins de ${NORMS.reps.from} reps`, tone: 'bg-line-2' },
+        { key: 'inZone', n: spread.inZone, label: `${NORMS.reps.from} à ${NORMS.reps.to} reps`, tone: 'bg-accent' },
+        { key: 'above', n: spread.above, label: `plus de ${NORMS.reps.to} reps`, tone: 'bg-line-2' },
+      ]}
+    />
+  );
+}
+
+/** Barre segmentee et sa legende en pourcentages. Les segments vides disparaissent. */
+function SpreadBar({
+  segments: all,
+}: {
+  segments: Array<{ key: string; n: number; label: string; tone: string }>;
+}) {
+  const total = all.reduce((sum, segment) => sum + segment.n, 0);
+  if (total === 0) return <p className="text-[13px] text-ink-3">Aucune série à répartir.</p>;
+
+  const pct = (n: number): number => (n / total) * 100;
+  const segments = all.filter((segment) => segment.n > 0);
 
   return (
     <>
@@ -704,7 +829,7 @@ function RepsBar({ spread }: { spread: RepsSpread }) {
         {segments.map((segment) => (
           <li key={segment.key} className="flex items-center gap-2 text-[13px]">
             <span className={cx('h-2 w-2 shrink-0 rounded-full', segment.tone)} />
-            <span className="min-w-0 flex-1 truncate text-ink-2">{segment.label} reps</span>
+            <span className="min-w-0 flex-1 truncate text-ink-2">{segment.label}</span>
             <span className="num shrink-0 font-bold">{Math.round(pct(segment.n))} %</span>
           </li>
         ))}
@@ -719,6 +844,16 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0
     ? Math.round(((sorted[middle - 1] as number) + (sorted[middle] as number)) / 2)
     : (sorted[middle] as number);
+}
+
+/**
+ * Libelle de muscle enumere dans une phrase.
+ *
+ * Les libelles sont capitalises parce qu'ils servent ailleurs d'etiquettes
+ * autonomes. Dans une phrase, apres deux-points, ce sont des noms communs.
+ */
+function lower(label: string): string {
+  return label.charAt(0).toLocaleLowerCase('fr') + label.slice(1);
 }
 
 function list(names: string[]): string {
@@ -932,6 +1067,276 @@ function DensityCard({ context }: { context: AnalysisContext }) {
         label="Tonnage par minute"
       />
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cartes du programme                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Chaque seance de la semaine type, avec sa duree estimee.
+ *
+ * La mediane de « Respect des normes » cache une seance a 24 series derriere
+ * trois seances a 12 : ici chacune est jugee seule. La duree repond a la
+ * question qu'on se pose avant de s'engager sur un programme, « est-ce que ca
+ * tient dans mon creneau ».
+ */
+function SessionsCard({ context }: { context: AnalysisContext }) {
+  const { plan, exercises } = context;
+  const rows = useMemo(
+    () =>
+      plan ? routineInsights(plan.picked, (id) => exercises.get(id)?.muscleGroup) : [],
+    [plan, exercises],
+  );
+
+  if (rows.length === 0) return <Hint>Aucune séance retenue.</Hint>;
+
+  const weekSec = rows.reduce((sum, row) => sum + row.durationSec * row.times, 0);
+  const weekSets = rows.reduce((sum, row) => sum + row.sets * row.times, 0);
+  const week = formatApproxDuration(weekSec);
+  const a = DURATION_ASSUMPTIONS;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <Tile value={week.value} unit={week.unit} label="D’entraînement par semaine" accent="accent" />
+        <Tile value={String(weekSets)} label="Séries de travail par semaine" />
+      </div>
+
+      <Card className="mt-3 divide-y divide-line p-0">
+        {rows.map((row) => {
+          const duration = formatApproxDuration(row.durationSec);
+          const state = stateOf(row.sets, NORMS.setsPerSession);
+          return (
+            <div key={row.routine.id} className="px-4 py-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-[15px] font-semibold">
+                  {row.routine.name}
+                  {row.times > 1 && (
+                    <span className="num ml-1.5 text-[13px] font-bold text-ink-3">×{row.times}</span>
+                  )}
+                </span>
+                <span className="num shrink-0 text-[15px] font-bold">
+                  {duration.value}
+                  {duration.unit && (
+                    <span className="ml-0.5 text-[12px] font-bold text-ink-3">{duration.unit}</span>
+                  )}
+                </span>
+              </div>
+              <p className="mt-0.5 text-[13px] leading-snug text-ink-3">
+                <span className={cx('num font-bold', STATE_COLOR[state])}>
+                  {row.sets} série{row.sets > 1 ? 's' : ''}
+                </span>
+                {state !== 'dans' && <span className={STATE_COLOR[state]}> ({STATE_LABEL[state]})</span>}
+                {row.muscles.length > 0 && ' · '}
+                {row.muscles
+                  .map((muscle) => `${MUSCLE_GROUP_LABELS[muscle.group]} ${muscle.sets}`)
+                  .join(' · ')}
+              </p>
+            </div>
+          );
+        })}
+      </Card>
+
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+        Durées estimées si tu respectes les repos prévus, à raison d’environ {a.secPerRep} s par
+        répétition et {a.setupSec} s d’installation par série. Le nombre de séries est jugé face à
+        la zone de {NORMS.setsPerSession.from} à {NORMS.setsPerSession.to} par séance.
+      </p>
+    </>
+  );
+}
+
+/**
+ * Rapports entre muscles qui travaillent en opposition.
+ *
+ * Le dernier rapport, haut et bas du corps, est mesure sans verdict : le haut
+ * compte plus de groupes que le bas, et aucune proportion ne vaut pour tout
+ * le monde.
+ */
+function BalanceCard({ context }: { context: AnalysisContext }) {
+  const { workouts, exercises, weekCount } = context;
+  const rows = useMemo(
+    () =>
+      muscleBalances(muscleLoad(workouts, (id) => exercises.get(id)?.muscleGroup, weekCount)),
+    [workouts, exercises, weekCount],
+  );
+
+  if (rows.length === 0) return <Hint>Aucune série à comparer.</Hint>;
+
+  return (
+    <>
+      <Card className="divide-y divide-line p-0">
+        {rows.map((row) => (
+          <BalanceLine key={row.def.id} row={row} />
+        ))}
+      </Card>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+        Rapports calculés en séries par semaine, chaque exercice comptant pour son groupe
+        principal. Les épaules sont rangées côté poussée : un oiseau ou un face pull, qui tirent,
+        y sont donc comptés à tort.
+      </p>
+    </>
+  );
+}
+
+function BalanceLine({ row }: { row: BalanceRow }) {
+  const { def, left, right, ratio } = row;
+  const total = left + right;
+  const leftPct = total > 0 ? (left / total) * 100 : 0;
+  const state: NormState | null =
+    def.range && ratio !== null ? stateOf(ratio, def.range) : def.range ? 'dessus' : null;
+  const sets = (n: number): string => n.toFixed(1).replace('.', ',').replace(/,0$/, '');
+  const ratioText = (n: number): string => n.toFixed(2).replace('.', ',');
+
+  // Un cote vide ne donne pas un rapport mais un manque : on le dit en mots,
+  // un « 0,00 » se lit comme une mesure et non comme une absence.
+  const empty = left === 0 ? def.left.label : right === 0 ? def.right.label : null;
+
+  let verdict: string;
+  if (!def.range) verdict = `${Math.round(leftPct)} % / ${100 - Math.round(leftPct)} %`;
+  else if (empty) verdict = `aucune série côté ${lower(empty)}`;
+  else verdict = `${def.range.from.toString().replace('.', ',')} à ${def.range.to.toString().replace('.', ',')} · ${STATE_LABEL[state as NormState]}`;
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="min-w-0 text-[14px] font-medium">{def.label}</span>
+        {ratio !== null && !empty && (
+          <span className={cx('num shrink-0 text-[15px] font-bold', state ? STATE_COLOR[state] : 'text-ink')}>
+            {ratioText(ratio)}
+          </span>
+        )}
+      </div>
+      <div className="mt-2 flex h-2.5 gap-px overflow-hidden rounded-pill bg-alt">
+        <div className="h-full bg-accent transition-[width] duration-500 ease-ease" style={{ width: `${leftPct}%` }} />
+        <div className="h-full flex-1 bg-accent-border" />
+      </div>
+      <div className="mt-1 flex justify-between gap-3 text-[12px] text-ink-2">
+        <span className="min-w-0 truncate">
+          {def.left.label} <span className="num font-bold text-ink">{sets(left)}</span>
+        </span>
+        <span className="min-w-0 truncate text-right">
+          {def.right.label} <span className="num font-bold text-ink">{sets(right)}</span>
+        </span>
+      </div>
+      <p className={cx('mt-1 text-[13px]', state ? STATE_COLOR[state] : 'text-ink-3')}>{verdict}</p>
+      {state && state !== 'dans' && (
+        <p className="mt-0.5 text-[13px] leading-snug text-ink-3">
+          {state === 'dessous' ? def.belowAdvice : def.aboveAdvice}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Repos prescrits, confrontes a la lourdeur de l'exercice.
+ *
+ * Seul le repos TROP COURT est signale. Un repos long ne nuit qu'a la duree
+ * de la seance, que la carte « Séance par séance » montre deja.
+ */
+function RestCard({ context }: { context: AnalysisContext }) {
+  const { plan, exercises } = context;
+  const review = useMemo(() => (plan ? restReview(plan.picked) : null), [plan]);
+
+  if (!review || review.judged.length === 0) {
+    return (
+      <Hint>
+        Aucun exercice à juger : seuls ceux qui comptent au moins deux séries, hors superset, ont
+        un repos qui sépare deux efforts.
+      </Hint>
+    );
+  }
+
+  const ok = review.judged.length - review.short.length;
+  const state: NormState = review.short.length === 0 ? 'dans' : 'dessous';
+  const minutes = (sec: number): string => (sec % 60 === 0 ? `${sec / 60} min` : formatDuration(sec));
+
+  return (
+    <>
+      <Card className="divide-y divide-line p-0">
+        <div className="px-4 py-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 text-[14px] font-medium">Exercices assez reposés</span>
+            <span className={cx('num shrink-0 text-[15px] font-bold', STATE_COLOR[state])}>
+              {ok} / {review.judged.length}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[13px] text-ink-3">
+            {minutes(REST_NORMS.heavyMinSec)} après une série lourde, {minutes(REST_NORMS.otherMinSec)}{' '}
+            sinon
+          </p>
+        </div>
+        {review.short.map((row, index) => (
+          <div key={`${row.routineName}-${row.exerciseId}-${index}`} className="px-4 py-2.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-[14px] font-semibold">
+                {exercises.get(row.exerciseId)?.name ?? 'Exercice supprimé'}
+              </span>
+              <span className="num shrink-0 text-[14px] font-bold text-ink-3">
+                {row.restSec > 0 ? formatDuration(row.restSec) : 'aucun'}
+              </span>
+            </div>
+            <p className="mt-0.5 truncate text-[12px] text-ink-3">
+              {row.routineName} · {row.heavy ? 'séries lourdes' : 'séries modérées'},{' '}
+              {minutes(row.minSec)} conseillées
+            </p>
+          </div>
+        ))}
+      </Card>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+        Une série est lourde à {REST_NORMS.heavyMaxReps} répétitions visées ou moins : la suivante
+        garde sa qualité si l’on récupère davantage. Les exercices à une seule série ne sont pas
+        jugés
+        {review.inSuperset > 0 &&
+          `, ni les ${review.inSuperset} exercice${review.inSuperset > 1 ? 's' : ''} en superset, où l’on enchaîne volontairement`}
+        .
+      </p>
+    </>
+  );
+}
+
+/** Effort vise sur les series de travail de la semaine. */
+function PlannedEffortCard({ context }: { context: AnalysisContext }) {
+  const { plan, settings } = context;
+  const effort = useMemo(() => (plan ? plannedEffort(plan.picked) : null), [plan]);
+
+  if (!effort || effort.total === 0) return <Hint>Aucune série de travail prévue.</Hint>;
+
+  const rir = (settings.effortScale ?? 'rpe') === 'rir';
+  const share = (n: number): number => Math.round((n / effort.total) * 100);
+  const failureShare = share(effort.failure);
+  const techniques = [
+    effort.drops > 0 ? `${effort.drops} dégressive${effort.drops > 1 ? 's' : ''}` : '',
+    effort.myo > 0 ? `${effort.myo} série${effort.myo > 1 ? 's' : ''} myo-reps` : '',
+  ].filter(Boolean);
+
+  return (
+    <>
+      <Card className="p-4">
+        <SpreadBar
+          segments={[
+            { key: 'failure', n: effort.failure, label: 'À l’échec', tone: 'bg-pr' },
+            { key: 'near', n: effort.near, label: rir ? 'RIR 0,5 à 1' : 'RPE 9 à 9,5', tone: 'bg-accent' },
+            { key: 'moderate', n: effort.moderate, label: rir ? 'RIR 1,5 à 3' : 'RPE 7 à 8,5', tone: 'bg-accent-light' },
+            { key: 'light', n: effort.light, label: rir ? 'Au-delà de RIR 3' : 'Sous RPE 7', tone: 'bg-accent-border' },
+            { key: 'unspecified', n: effort.unspecified, label: 'Sans consigne d’effort', tone: 'bg-line-2' },
+          ]}
+        />
+      </Card>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+        <span className="num font-bold text-ink-2">{failureShare} %</span> des séries de travail
+        vont à l’échec
+        {techniques.length > 0 && <>, avec {techniques.join(' et ')} par semaine</>}.{' '}
+        {failureShare >= 50
+          ? 'Mener la plupart des séries à l’échec alourdit la fatigue pour un gain modeste : on le réserve souvent aux dernières séries, ou aux exercices d’isolation.'
+          : share(effort.unspecified) >= 50
+            ? 'La plupart des séries n’ont pas de consigne d’effort : en fixer une aide à doser la séance d’une semaine à l’autre.'
+            : 'S’arrêter à une ou deux répétitions de l’échec garde l’essentiel du stimulus pour une fatigue bien moindre.'}
+      </p>
+    </>
   );
 }
 
