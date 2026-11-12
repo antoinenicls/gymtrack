@@ -85,7 +85,7 @@ check(
 await page.getByRole('button', { name: 'Autres actions sur mes séances' }).click();
 await page.waitForTimeout(300);
 const entree = page.getByRole('button', { name: /Changer l’ordre/ });
-check('« Changer l’ordre » présent dans Organiser', (await entree.count()) === 1);
+check('« Changer l’ordre » présent dans le menu Mes séances', (await entree.count()) === 1);
 await entree.click();
 await page.waitForTimeout(400);
 

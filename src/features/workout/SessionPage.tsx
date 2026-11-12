@@ -656,7 +656,11 @@ function SessionLauncher({
         </div>
       </Sheet>
 
-      <Sheet open={listMenu} onClose={() => setListMenu(false)} title="Organiser">
+      {/* Titre = l'OBJET du menu, pas une action. « Organiser » ne couvrait
+          plus « Partager des séances » des qu'on l'a ajoute ; un verbe vieillit
+          a chaque nouvelle entree, le nom de la section, lui, reste juste. Il
+          reprend aussi le titre a cote duquel on a touche les trois points. */}
+      <Sheet open={listMenu} onClose={() => setListMenu(false)} title="Mes séances">
         <ul className="space-y-2 pb-2">
           <li>
             <MenuRow
