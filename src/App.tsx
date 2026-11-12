@@ -37,6 +37,15 @@ const TABS = [
   { to: '/analyse', label: 'Analyse', Icon: BarChart3 },
 ];
 
+/**
+ * Hauteur de la bande opaque du haut (voir le shell plus bas).
+ * La zone de la barre d'etat quand l'app passe dessous, plus 8 px : WebKit
+ * cherche l'element du bord 4 px a l'interieur de l'ecran, il lui faut donc
+ * une epaisseur reelle, y compris quand la barre d'etat est hors de la page
+ * et que l'encart vaut 0.
+ */
+const TOP_EDGE = 'calc(env(safe-area-inset-top) + 8px)';
+
 export default function App() {
   const hydrate = useWorkoutStore((s) => s.hydrate);
   const hasActiveWorkout = useWorkoutStore((s) => s.workout !== null);
@@ -77,12 +86,24 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full flex-col" style={{ height: 'var(--vh)' }}>
-      <main
-        ref={setMainEl}
-        className="scroll-area flex-1"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
+    <div className="flex h-full flex-col" style={{ height: 'var(--vh)', paddingTop: TOP_EDGE }}>
+      {/* Bord haut opaque, contre le flou d'iOS 26.
+          Depuis iOS 26, une app installee sur l'ecran d'accueil recoit un flou
+          degrade sur le haut de la page (l'effet « Liquid Glass » du bord de
+          defilement), qui deborde d'une quarantaine de points et brouillait le
+          titre de chaque onglet, meme tout en haut. WebKit ne le retire que
+          s'il trouve, au bord haut, un element fixe, pleine largeur et a fond
+          OPAQUE : il prolonge alors sa couleur au lieu de flouter. Cette bande
+          est cet element. Elle recouvre exactement la marge haute du shell,
+          donc ne cache rien : le <main>, et ses en-tetes collants, commencent
+          dessous. PAS de `pointer-events: none` : WebKit la trouve par un
+          test de toucher, qui ignorerait une bande transparente au doigt. */}
+      <div
+        aria-hidden
+        className="fixed inset-x-0 top-0 bg-white"
+        style={{ height: TOP_EDGE }}
+      />
+      <main ref={setMainEl} className="scroll-area flex-1">
         {/* La cle sur le chemin fait rejouer l'animation a chaque changement
             d'ecran : le contenu monte legerement en apparaissant, ce qui donne
             une direction au changement au lieu d'un remplacement sec. */}

@@ -75,12 +75,17 @@ export default function ProfilePage() {
 
   return (
     <div className="pb-8">
-      <div className="flex items-start justify-between px-4 pt-1">
+      {/* Titre et roue centres l'un sur l'autre. Le titre porte deja sa
+          marge de cote : la rangee n'en ajoute qu'a droite, sinon « Profil »
+          partait plus loin du bord que les cartes en dessous. Sans sous-titre,
+          la rangee ne doit pas etre plus haute que la roue : plus d'espace
+          vide sous le titre. */}
+      <div className="flex items-center justify-between pr-4">
         <PageTitle>Profil</PageTitle>
         <Link
           to="/profil/reglages"
           aria-label="Réglages"
-          className="pressable mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-alt text-ink-2"
+          className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-alt text-ink-2"
         >
           <Settings size={20} strokeWidth={2.2} />
         </Link>
