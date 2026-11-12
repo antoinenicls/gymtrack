@@ -158,11 +158,7 @@ export default function AnalysisPage() {
   return (
     <div className="pb-10">
       <PageTitle
-        sub={
-          mode === 'programme'
-            ? 'Ta semaine type, telle que prévue'
-            : `Les ${weekCount} dernières semaines`
-        }
+        sub={mode === 'programme' ? undefined : `Les ${weekCount} dernières semaines`}
       >
         Analyse
       </PageTitle>

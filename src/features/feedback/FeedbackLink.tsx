@@ -24,7 +24,7 @@ export default function FeedbackLink() {
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-semibold">Donner mon avis</span>
         <span className="block text-[12px] leading-snug text-ink-2">
-          Une idée, un bug, une remarque : je lis tout.
+          Une idée, un bug, une remarque
         </span>
       </span>
       <ChevronRight size={17} className="shrink-0 text-ink-3" />

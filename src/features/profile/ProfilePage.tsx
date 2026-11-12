@@ -76,7 +76,7 @@ export default function ProfilePage() {
   return (
     <div className="pb-8">
       <div className="flex items-start justify-between px-4 pt-1">
-        <PageTitle sub="Ce que disent tes chiffres">Profil</PageTitle>
+        <PageTitle>Profil</PageTitle>
         <Link
           to="/profil/reglages"
           aria-label="Réglages"

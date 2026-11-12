@@ -381,7 +381,7 @@ function SessionLauncher({
         sub={
           activeWorkout
             ? 'Ton entraînement continue en bas de l’écran. Consulte ou modifie ce que tu veux, puis reprends-le.'
-            : 'Lance une séance vide, ou reprends une séance enregistrée.'
+            : undefined
         }
       >
         Séance
