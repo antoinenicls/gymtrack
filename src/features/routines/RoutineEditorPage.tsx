@@ -282,7 +282,10 @@ export default function RoutineEditorPage() {
     <div className="flex h-full flex-col">
       <TopBar onBack={leave} onSave={() => void save()} />
 
-      <div className="scroll-area flex-1 pb-8">
+      {/* Pas de `scroll-area` : c'est le <main> qui defile. Un conteneur
+          `overflow-y: auto` sans hauteur bornee bloque le glisser sur Chrome
+          Android (voir la seance en cours, qui a eu le meme bug). */}
+      <div className="flex-1 pb-8">
         {/* Marqueur permanent du mode modification. */}
         <div className="px-4 pt-3">
           <Banner tone="accent">

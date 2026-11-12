@@ -92,7 +92,10 @@ export default function RoutineDetailPage() {
         onEdit={() => navigate(`/routines/${routine.id}/modifier`)}
       />
 
-      <div className="scroll-area flex-1 pb-6">
+      {/* Pas de `scroll-area` : c'est le <main> qui defile. Un conteneur
+          `overflow-y: auto` sans hauteur bornee bloque le glisser sur Chrome
+          Android (voir la seance en cours, qui a eu le meme bug). */}
+      <div className="flex-1 pb-6">
         <header className="px-4 pt-3">
           <h1 className="font-display text-[28px] font-black leading-tight tracking-[-1.2px]">
             {routine.name}

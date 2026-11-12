@@ -1137,7 +1137,13 @@ function LiveWorkout({
         </Button>
       </header>
 
-      <div className="scroll-area flex-1 pb-8">
+      {/* PAS de `scroll-area` ici : c'est le <main> du shell qui defile. Ce
+          bloc n'a pas de hauteur bornee, il n'a donc jamais rien a faire
+          defiler, mais en `overflow-y: auto` il restait un conteneur de
+          defilement, et son `overscroll-behavior: contain` empechait Chrome
+          Android de passer le geste au <main> : sur un Pixel, la seance
+          etait figee sur son haut. Safari, lui, laissait passer. */}
+      <div className="flex-1 pb-8">
         {/* Titre + duree + description, comme dans la capture. */}
         <div className="px-4 pb-2 pt-4">
           <input

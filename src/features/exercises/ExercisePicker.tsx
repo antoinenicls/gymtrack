@@ -148,7 +148,7 @@ export default function ExercisePicker({
           </Button>
         </div>
 
-        <div className="scroll-area -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 mt-2 flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 pb-1">
           <Chip active={group === 'tous'} onClick={() => setGroup('tous')}>
             Tous
           </Chip>
