@@ -6,8 +6,9 @@
  * congestionnes, ce qui est exactement le contexte d'usage de cette app.
  */
 
-import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useSheetDrag } from './useSheetDrag';
 
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
@@ -269,6 +270,13 @@ export function Sheet({
   const [rendered, setRendered] = useState(open);
   const [closing, setClosing] = useState(false);
 
+  // Glisser vers le bas pour fermer, sans rebond de la feuille (voir le hook).
+  // `rendered` dans la condition : le panneau n'existe qu'au rendu suivant
+  // l'ouverture, et le hook doit s'abonner a ce moment-la.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useSheetDrag(panelRef, scrollRef, onClose, open && rendered);
+
   useEffect(() => {
     if (open) {
       setRendered(true);
@@ -327,13 +335,22 @@ export function Sheet({
         aria-modal="true"
         aria-label={title}
         className={cx(
-          'relative flex flex-col overflow-hidden rounded-t-[24px] bg-white',
+          'relative flex flex-col',
           tall ? 'h-[88%]' : 'max-h-[88%]',
           closing ? 'animate-slide-down' : 'animate-slide-up',
         )}
+      >
+      {/* Panneau visible, distinct du conteneur anime : le glissement le decale
+          par un style inline, que l'animation d'entree / sortie du conteneur
+          ecraserait sinon. */}
+      <div
+        ref={panelRef}
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[24px] bg-white"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        {/* Poignee : la feuille se ferme en glissant vers le bas. */}
+        <div aria-hidden className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-black/15" />
+        <div className="flex items-center justify-between border-b border-line px-4 pb-3 pt-1">
           <h2 className="font-display text-[17px] font-extrabold tracking-[-0.03em]">{title}</h2>
           <Button variant="ghost" onClick={onClose} className="px-3">
             Fermer
@@ -343,8 +360,9 @@ export function Sheet({
             la hauteur de son contenu tant qu'on ne l'a pas pose. Sans lui, une
             longue liste fait deborder le panneau de son max-h et pousse le
             pied de page HORS de l'ecran, sous la barre d'onglets. */}
-        <div className="scroll-area min-h-0 flex-1 px-4 py-3">{children}</div>
+        <div ref={scrollRef} className="scroll-area min-h-0 flex-1 px-4 py-3">{children}</div>
         {footer && <div className="shrink-0 border-t border-line px-4 py-3">{footer}</div>}
+      </div>
       </div>
     </div>,
     document.body,
