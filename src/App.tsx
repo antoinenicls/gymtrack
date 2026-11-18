@@ -28,6 +28,7 @@ import SettingsPage from './features/profile/SettingsPage';
 import RestTimerBar from './features/workout/RestTimerBar';
 import MiniSessionBar from './features/workout/MiniSessionBar';
 import IOSInstallPrompt from './features/onboarding/IOSInstallPrompt';
+import WhatsNew from './features/onboarding/WhatsNew';
 
 const TABS = [
   { to: '/profil', label: 'Profil', Icon: User },
@@ -145,6 +146,10 @@ export default function App() {
 
       {/* Invitation a installer l'app, Safari iOS seulement. */}
       <IOSInstallPrompt />
+
+      {/* Nouveautes depuis la derniere visite, une fois, jamais en meme temps
+          que l'invitation a installer. */}
+      <WhatsNew />
 
       <nav
         className="relative z-30 shrink-0 border-t border-line bg-white/95 backdrop-blur"

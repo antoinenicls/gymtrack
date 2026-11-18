@@ -350,6 +350,12 @@ export interface Settings {
    * ecartee. Absent = jamais. Elle ne revient pas avant deux semaines.
    */
   iosPromptDismissedAt?: number;
+  /**
+   * Derniere nouveaute vue dans « Quoi de neuf » (id `AAAA-MM-JJ-sujet`).
+   * Absent chez un athlete d'avant cette fonction : il voit alors les
+   * dernieres nouveautes une fois.
+   */
+  whatsNewSeenId?: string;
 }
 
 /**

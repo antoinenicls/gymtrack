@@ -10,6 +10,8 @@ import { DEFAULT_SETTINGS, getDb } from '../db';
 import { SEED_EXERCISES, SEED_VERSION } from '@/data/seedExercises';
 import { emptyRecord, rebuildRecords } from '@/lib/records';
 import { workingSets } from '@/lib/metrics';
+import { latestId } from '@/lib/whatsNew';
+import { CHANGELOG } from '@/data/changelog';
 import type {
   ActiveSession,
   Exercise,
@@ -161,7 +163,13 @@ async function runSeed(): Promise<void> {
   }
   await tx.done;
 
-  await settingsRepo.save({ ...settings, seedVersion: SEED_VERSION });
+  await settingsRepo.save({
+    ...settings,
+    seedVersion: SEED_VERSION,
+    // Installation neuve (aucun exercice encore) : rien a annoncer, toutes les
+    // nouveautes actuelles comptent comme vues.
+    ...(existing.length === 0 && { whatsNewSeenId: latestId(CHANGELOG) }),
+  });
   exercisesChanged();
 }
 

@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import { ChevronRight, PlusSquare, Share, Smartphone } from 'lucide-react';
 import { settingsRepo } from '@/services/repositories';
 import { Button, SectionLabel, Sheet } from '@/ui/primitives';
+import type { Settings } from '@/types/domain';
 
 const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
 
@@ -55,6 +56,17 @@ export function canInstallFromSafari(): boolean {
   return isIOSSafari() && !isStandalone();
 }
 
+/**
+ * L'invitation va-t-elle s'ouvrir d'elle-meme : Safari iOS, pas installee, pas
+ * ecartee depuis moins de deux semaines. « Quoi de neuf » s'efface alors, pour
+ * ne pas empiler deux feuilles a l'ouverture.
+ */
+export function installPromptDue(settings: Pick<Settings, 'iosPromptDismissedAt'>): boolean {
+  if (!canInstallFromSafari()) return false;
+  const dismissed = settings.iosPromptDismissedAt;
+  return !(dismissed && Date.now() - dismissed < TWO_WEEKS);
+}
+
 /** Rouvre l'invitation, sans attendre ni tenir compte d'un refus passe. */
 export function openInstallPrompt(): void {
   window.dispatchEvent(new Event(OPEN_EVENT));
@@ -70,13 +82,12 @@ export default function IOSInstallPrompt() {
   }, []);
 
   useEffect(() => {
-    if (!isIOSSafari() || isStandalone()) return;
+    if (!canInstallFromSafari()) return;
 
     let timer: number | undefined;
     let cancelled = false;
     void settingsRepo.get().then((settings) => {
-      const dismissed = settings.iosPromptDismissedAt;
-      if (cancelled || (dismissed && Date.now() - dismissed < TWO_WEEKS)) return;
+      if (cancelled || !installPromptDue(settings)) return;
       timer = window.setTimeout(() => setOpen(true), DELAY_MS);
     });
 

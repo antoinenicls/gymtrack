@@ -24,6 +24,7 @@ import type { EffortScale } from '@/lib/effort';
 import { Banner, Button, Card, SectionLabel, Sheet, cx } from '@/ui/primitives';
 import FeedbackLink from '@/features/feedback/FeedbackLink';
 import { InstallLink } from '@/features/onboarding/IOSInstallPrompt';
+import { WhatsNewLink } from '@/features/onboarding/WhatsNew';
 import {
   notificationPermission,
   previewRestChime,
@@ -404,6 +405,8 @@ export default function SettingsPage() {
             Effacer toutes les données
           </Button>
         </section>
+
+        <WhatsNewLink />
 
         <section>
           <SectionLabel>Ton avis</SectionLabel>
